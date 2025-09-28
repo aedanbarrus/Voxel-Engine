@@ -1,0 +1,32 @@
+#version 460
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(r32f, binding = 0) uniform image3D screen;
+layout(std430, binding = 1) buffer SharedBuffer {
+    uint maxDist;
+};
+
+vec2 square(vec2 number)
+{
+    float real = number.x*number.x-number.y*number.y;
+    float imag = number.y*number.x*2;
+    return vec2(real,imag);
+}
+bool isIn(vec2 c)
+{
+    vec2 num = vec2(0,0);
+    for(int i = 0; i<800; i++)
+    {
+        num = square(num)+c;
+        if(length(num)>100000)
+            return false;
+    }
+    return true;
+}
+
+void main()
+{
+	ivec3 pos = ivec3(gl_GlobalInvocationID.xyz);
+	imageStore(screen,pos,vec4(1-imageLoad(screen,pos).r/uintBitsToFloat(maxDist),0,0,0));
+    imageStore(screen,pos,vec4(isIn(5*(vec3(pos)/gl_NumWorkGroups).xz-2.5),0,0,0));
+
+}

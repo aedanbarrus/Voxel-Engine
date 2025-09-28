@@ -1,0 +1,34 @@
+#version 460
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(r32f, binding = 0) uniform image3D screen;
+
+layout(std430, binding = 1) buffer VolumeBuffer {
+    vec3 randomPoints[];
+};
+
+layout(std430, binding = 2) buffer SharedBuffer {
+    uint sharedFloat;
+};
+
+uniform int volumeSize;
+
+void main()
+{
+	ivec3 pos = ivec3(gl_GlobalInvocationID.xyz);
+	ivec3 posInRandom = pos*volumeSize/ivec3(gl_NumWorkGroups);
+	float minDist = 10000;
+	/*for(int x = -1; x<2; x++)
+		for(int y = -1; y<2; y++)
+			for(int z = -1; z<2; z++)
+			{
+				ivec3 offset = (posInRandom+ivec3(x,y,z)+volumeSize)%volumeSize;
+				int index = offset.x+offset.y*volumeSize+offset.z*volumeSize*volumeSize;
+				float distance = distance(vec3(pos),randomPoints[index]);
+				minDist = min(distance,minDist);
+			}*/
+	for(int i = 0; i<randomPoints.length(); i++)
+		minDist = min(distance(pos,randomPoints[i]),minDist);
+	atomicMax(sharedFloat, floatBitsToUint(minDist));
+	//atomicAdd(sharedFloat,floatBitsToUint(max(uintBitsToFloat(sharedFloat),minDist))-sharedFloat);
+	imageStore(screen,pos,vec4(minDist,0,0,0));
+}
