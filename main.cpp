@@ -22,6 +22,7 @@
 #include <omp.h>
 #define _CRT_SECURE_NO_WARNINGS
 
+//Testing github changes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
