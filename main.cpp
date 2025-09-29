@@ -84,14 +84,17 @@ int main()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImFontConfig config;
+    config.SizePixels = 18.0f;
+    io.Fonts->Clear();
+    io.Fonts->AddFontDefault(&config);
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
-    // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 #ifdef __EMSCRIPTEN__
     ImGui_ImplGlfw_InstallEmscriptenCallbacks(window, "#canvas");
@@ -304,6 +307,7 @@ int main()
 
     myEarth.updateMesh();
     std::vector<ParticleGenerator> myParticles;
+    bool syncing = false;
     while (!glfwWindowShouldClose(window))
     {
         CollisionData data = { {} };
@@ -318,12 +322,11 @@ int main()
             myEarth.genParticle(particle,deltaTime);
         }
         spin = glm::vec3(0, 0, 0);
-        ImGui::GetIO().FontGlobalScale = 1.0f;
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(450, 300));
+        ImGui::SetNextWindowSize(ImVec2(450, 400));
         ImGui::Begin("Kernel Editor");
         ImGui::Text("Edit 3x3 Kernel:");
         ImGui::SliderFloat3("Row 1", &kernel[0], -10.0, 10.0);
@@ -347,7 +350,23 @@ int main()
         if (ImGui::Button(lines==false?"Enable Lines":"Disable Lines")) {
             lines = !lines;
         }
+        for (int i = 0; i < 9; i++)
+        {
+            pastTime[i] = pastTime[i + 1];
+        }
+        pastTime[9] = deltaTime;
+        float sum = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            sum += pastTime[i];
+        }
+        sum /= 10;
+        ImGui::Text("%f FPS", 1 / sum);
+        ImGui::Text("Pos: (%f, %f, %f)", Camera::getCamera()->pos.x, Camera::getCamera()->pos.y, Camera::getCamera()->pos.z);
+        ImGui::End();
+
         ImGui::SetNextWindowPos(ImVec2(450, 0));
+        ImGui::SetNextWindowSize(ImVec2(450, 400));
         ImGui::Begin("Particle Editor");
 
         if (ImGui::Button("Add Particle")) {
@@ -371,6 +390,11 @@ int main()
                 ImGui::InputFloat("Drag", &myParticles[i].type.drag);
                 ImGui::InputFloat("Time Between Particles", &myParticles[i].timeBetweenParticles);
                 ImGui::InputInt("Particles per Cycle", &myParticles[i].numberPerCycle);
+				static float offset = 0.0f;
+                ImGui::InputFloat("", &offset);
+                ImGui::SameLine();
+                if(ImGui::Button("Add Offset"))
+					myParticles[i].timePassed += offset;
                 if (ImGui::Button("Duplicate")) {
                     myParticles.insert(myParticles.begin() + i, myParticles[i]);
                     ImGui::PopID();
@@ -397,9 +421,163 @@ int main()
                 myParticles.clear();
             }
         }
+        static std::vector<bool> selectedGenerators;
 
+        if (selectedGenerators.size() != myParticles.size())
+        {
+            selectedGenerators = std::vector<bool>(myParticles.size(), false);
+        }
+
+        if (syncing == true)
+        {
+            ImGui::Text("Select Generators to Sync:");
+            for (size_t i = 0; i < myParticles.size(); ++i) {
+                std::string label = "Generator " + std::to_string(i);
+                bool test = selectedGenerators[i];
+                ImGui::Checkbox(label.c_str(), &test);
+                selectedGenerators[i] = test;
+            }
+        }
+        
+        if (myParticles.size()!=0 && ImGui::Button(!syncing?"Sync":"Confirm Sync")) {
+            if (syncing == true)
+                for (size_t i = 0; i < myParticles.size(); i++) {
+                    if (selectedGenerators[i]) {
+                        myParticles[i].timePassed = 0.0f;
+                    }
+                }
+            syncing = !syncing;
+            selectedGenerators = std::vector<bool>(myParticles.size(), false);
+        }
+        if (myParticles.size() != 0 && ImGui::Button("Export Particles"))
+        {
+            std::string textToCopy = "";
+            for (int i = 0; i < myParticles.size(); i++)
+            {
+                textToCopy += std::to_string(myParticles[i].type.pos.x) + ",";
+				textToCopy += std::to_string(myParticles[i].type.pos.y) + ",";
+				textToCopy += std::to_string(myParticles[i].type.pos.z) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocity.x) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocity.y) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocity.z) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocityVar.x) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocityVar.y) + ",";
+				textToCopy += std::to_string(myParticles[i].type.velocityVar.z) + ",";
+				textToCopy += std::to_string(myParticles[i].type.beginColor.r) + ",";
+				textToCopy += std::to_string(myParticles[i].type.beginColor.g) + ",";
+				textToCopy += std::to_string(myParticles[i].type.beginColor.b) + ",";
+				textToCopy += std::to_string(myParticles[i].type.beginColor.a) + ",";
+				textToCopy += std::to_string(myParticles[i].type.endColor.r) + ",";
+				textToCopy += std::to_string(myParticles[i].type.endColor.g) + ",";
+				textToCopy += std::to_string(myParticles[i].type.endColor.b) + ",";
+				textToCopy += std::to_string(myParticles[i].type.endColor.a) + ",";
+				textToCopy += std::to_string(myParticles[i].type.colorVar.r) + ",";
+				textToCopy += std::to_string(myParticles[i].type.colorVar.g) + ",";
+				textToCopy += std::to_string(myParticles[i].type.colorVar.b) + ",";
+				textToCopy += std::to_string(myParticles[i].type.colorVar.a) + ",";
+				textToCopy += std::to_string(myParticles[i].type.acceleration.x) + ",";
+				textToCopy += std::to_string(myParticles[i].type.acceleration.y) + ",";
+				textToCopy += std::to_string(myParticles[i].type.acceleration.z) + ",";
+				textToCopy += std::to_string(myParticles[i].type.beginSize) + ",";
+				textToCopy += std::to_string(myParticles[i].type.endSize) + ",";
+				textToCopy += std::to_string(myParticles[i].type.sizeVar) + ",";
+				textToCopy += std::to_string(myParticles[i].type.lifetime) + ",";
+				textToCopy += std::to_string(myParticles[i].type.drag) + ",";
+				textToCopy += std::to_string(myParticles[i].timeBetweenParticles) + ",";
+                textToCopy += std::to_string(myParticles[i].numberPerCycle) + "\n";
+            }
+            glfwSetClipboardString(window, textToCopy.c_str());
+        }
+        if (ImGui::Button("Import Particles"))
+        {
+			std::string text = glfwGetClipboardString(window);
+            while (text.find("\n")!=std::string::npos)
+            {
+                ParticleGenerator newGen;
+				std::string line = text.substr(0, text.find("\n"));
+				float x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				float y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				float z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.pos = glm::vec3(x, y, z);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.velocity = glm::vec3(x, y, z);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.velocityVar = glm::vec3(x, y, z);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+                float w = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.beginColor = glm::vec4(x, y, z, w);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+                w = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.endColor = glm::vec4(x, y, z, w);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				w = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.colorVar = glm::vec4(x, y, z, w);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				y = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				z = std::stof(line.substr(0, line.find(",")));
+                line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.acceleration = glm::vec3(x, y, z);
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.beginSize = x;
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.endSize = x;
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.sizeVar = x;
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.lifetime = x;
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.type.drag = x;
+				x = std::stof(line.substr(0, line.find(",")));
+				line = line.substr(line.find(",") + 1, line.size());
+				newGen.timeBetweenParticles = x;
+				int n = std::stoi(line.substr(0, line.find(",")));
+                newGen.numberPerCycle = n;
+                newGen.timePassed = 0;
+
+				myParticles.push_back(newGen);
+
+				text = text.substr(text.find("\n") + 1, text.size());
+            }
+        }
         ImGui::End();
-
         if (!mouseLeftClicked)
         {
             glm::vec3 point = myEarth.physicObjects[0].calculateCameraCollision(Camera::getCamera()->pos, Camera::getCamera()->direction);
@@ -409,20 +587,6 @@ int main()
         }
         if (lines == true)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        for (int i = 0; i < 9; i++)
-        {
-            pastTime[i] = pastTime[i + 1];
-        }
-        pastTime[9] = deltaTime;
-        float sum = 0;
-        for (int i = 0; i < 10; i++)
-        {
-            sum += pastTime[i];
-        }
-        sum /= 10;
-        ImGui::Text("%f FPS", 1 / sum);
-        ImGui::Text("Pos: (%f, %f, %f)", Camera::getCamera()->pos.x, Camera::getCamera()->pos.y, Camera::getCamera()->pos.z);
-        ImGui::End();
 
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
