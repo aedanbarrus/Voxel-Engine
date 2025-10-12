@@ -141,11 +141,11 @@ int main()
     Earth myEarth = Earth();
     ParticleSystem myPartSystem = ParticleSystem();
     ParticleType particle = { glm::vec3(0,2,0),glm::vec3(0,0,0), 0.5f*glm::vec3(0.1,0.1,0.1),glm::vec4(1,0,0,1), glm::vec4(1,1,0,0), glm::vec4(0.3,0.15,0.15,0),glm::vec3(0,0,0),0.02, 0.001, 0.01,0.5};
-    Camera::getCamera()->sunDirrection = glm::vec3(0, -1, 0);
+    Camera::getCamera()->sunDirection = glm::vec3(0, -1, 0);
 
     
     time = glfwGetTime();
-    /*
+    //*
     std::vector<std::vector<float>> heightmap = getHeighmap();
     for (int i = 0; i < 1024; i++)
     {
@@ -172,7 +172,6 @@ int main()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnable(GL_CULL_FACE);
     //glEnable(GL_DEPTH_TEST);
 
     screenShader.use();
@@ -276,7 +275,6 @@ int main()
         0.01f,
         300.0f
     );
-    glEnable(GL_CULL_FACE);
     //resetChunk(myEarth.quadrantI[0]);
     //std::cout << myEarth.quadrantI[0].worldPos << myEarth.quadrantII[0].worldPos << myEarth.quadrantIII[0].worldPos << myEarth.quadrantIV[0].worldPos;
     std::vector<int> placeBlock = { 0,0,0 };
@@ -390,6 +388,18 @@ int main()
                 ImGui::InputFloat("Drag", &myParticles[i].type.drag);
                 ImGui::InputFloat("Time Between Particles", &myParticles[i].timeBetweenParticles);
                 ImGui::InputInt("Particles per Cycle", &myParticles[i].numberPerCycle);
+                static int index = -1;
+                ImGui::InputInt("Index", &index);
+                if (index != -1 && -1 < index && index < myParticles.size()) {
+					std::cout << "\nSet Generator " << index << std::endl;
+					ParticleGenerator gen = myParticles[index];
+                    myParticles[i].type.generator = &gen;
+					std::cout << myParticles[i].type.generator << ' ' << &myParticles[index] << std::endl;
+				}
+                if (index != -1)
+                {
+					index = -1;
+                }
 				static float offset = 0.0f;
                 ImGui::InputFloat("", &offset);
                 ImGui::SameLine();
@@ -413,14 +423,19 @@ int main()
                     ImGui::PopID();
                     break;
                 }
-
+                //ImVec2 min = ImGui::GetItemRectMin();
+                //ImVec2 max = ImGui::GetItemRectMax();
+                //ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                //draw_list->AddRectFilled(min, max, IM_COL32(50, 100, 200, 255));
             }
             ImGui::PopID();
-            if (i==myParticles.size()-1&&ImGui::Button("Delete All"))
-            {
-                myParticles.clear();
-            }
+            
         }
+        if (ImGui::Button("Delete All"))
+        {
+            myParticles.clear();
+        }
+
         static std::vector<bool> selectedGenerators;
 
         if (selectedGenerators.size() != myParticles.size())
@@ -616,7 +631,7 @@ int main()
         processInput(window);
         Camera::getCamera()->step(deltaTime);
         myEarth.step(deltaTime);
-        Camera::getCamera()->sunDirrection = glm::vec3(0, sin(glfwGetTime() / 10), cos(glfwGetTime() / 10));
+        Camera::getCamera()->sunDirection = glm::vec3(0, sin(glfwGetTime() / 10), cos(glfwGetTime() / 10));
         //glClearDepth(0.5f);
 
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -632,6 +647,7 @@ int main()
         chunkShader.setVec3("lightColor", glm::vec3(1, 1, 1));
         chunkShader.setVec3("lightPos", glm::vec3(16 + 32 * cos(glfwGetTime() / 10), 100, 16 + 32 * sin(glfwGetTime() / 10)));
         chunkShader.setVec3("viewPos", Camera::getCamera()->pos);
+
         myEarth.draw(chunkShader, Camera::getCamera()->pos);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -647,7 +663,7 @@ int main()
         }
         glUniform1fv(kernelLoc, 11, kernel);
         screenShader.setVec3("cameraViewDirection", Camera::getCamera()->direction);
-        screenShader.setVec3("cameraSunDirection", Camera::getCamera()->sunDirrection);
+        screenShader.setVec3("cameraSunDirection", Camera::getCamera()->sunDirection);
         screenShader.setVec3("cameraPos", Camera::getCamera()->pos);
 
         screenShader.setFloat("time", glfwGetTime());

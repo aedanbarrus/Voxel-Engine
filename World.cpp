@@ -27,9 +27,10 @@ Earth::Earth(){
 
 void Earth::draw(Shader& shader, glm::vec3 camPos)
 {
+	glEnable(GL_CULL_FACE);
 	shader.use();
 	shader.setVec3("cameraPos", Camera::getCamera()->pos);
-	shader.setVec3("sunDirection", Camera::getCamera()->sunDirrection);
+	shader.setVec3("sunDirection", Camera::getCamera()->sunDirection);
 	shader.setVec3("sunColor", glm::vec3(1,1,1));
 
 	for (Chunk& c : quadrantI)

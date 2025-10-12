@@ -28,6 +28,7 @@ struct ParticleType
 	float beginSize, endSize, sizeVar;
 	float lifetime = 1.0;
 	float drag = 1.0;
+	struct ParticleGenerator* generator = nullptr;
 };
 struct ParticleGenerator
 {
@@ -36,6 +37,15 @@ struct ParticleGenerator
 	float timePassed;
 	int numberPerCycle;
 };
+
+struct AttachedParticleGenerator
+{
+	ParticleType type;
+	bool end;
+	float time;
+	int numberPerCycle;
+};
+
 class ParticleSystem
 {
 public:
@@ -58,7 +68,8 @@ private:
 		float lifetime = 1.0;
 		float timeLeft = 0.0;
 		float drag = 1.0;
-		bool active;
+		bool active = true;
+		ParticleGenerator* generator = nullptr;
 	};
 	struct ParticleInstanceData
 	{

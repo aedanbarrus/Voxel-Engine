@@ -15,7 +15,7 @@ public:
 	glm::vec3 velocity;
 	glm::vec3 direction;
 	glm::mat4 projection;
-	glm::vec3 sunDirrection;
+	glm::vec3 sunDirection;
 	float pitch;
 	float yaw;
 	float velocityDamping;

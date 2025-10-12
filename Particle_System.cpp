@@ -65,7 +65,12 @@ void ParticleSystem::step(float deltaTime) {
 		c.timeLeft -= deltaTime;
 		if (c.timeLeft < 0.0f)
 		{
-			c.active = false; 
+			c.active = false;
+			if (c.generator != nullptr)
+			{
+				c.generator->type.pos = c.pos;
+				genParticle(*c.generator, -1);
+			}
 			continue;
 		}
 		c.pos += c.velocity * deltaTime;
@@ -86,8 +91,14 @@ void ParticleSystem::collide(PhysicObject& Object) {
 			continue;
 		CollisionData myData = { {} };
 		boxAndPointCollision(Object, c.pos, myData);
-		if (myData.contacts.size()>0)
+		if (myData.contacts.size() > 0)
+		{
+			if (c.generator != nullptr)
+			{
+				genParticle(*c.generator, -1);
+			}
 			c.active = false;
+		}
 	}
 }
 
@@ -132,6 +143,7 @@ void ParticleSystem::createParticle(ParticleType& newParticle)
 	thisPart->acceleration = newParticle.acceleration;
 	thisPart->pos = newParticle.pos;
 	thisPart->drag = newParticle.drag;
+	thisPart->generator = newParticle.generator;
 	currentParticle--;
 	if (currentParticle == -1)
 		currentParticle = 9999;
@@ -139,6 +151,12 @@ void ParticleSystem::createParticle(ParticleType& newParticle)
 
 void ParticleSystem::genParticle(ParticleGenerator& newParticle, float dt)
 {
+	if (dt == -1)
+	{
+		for (int i = 0; i < newParticle.numberPerCycle; ++i)
+			createParticle(newParticle.type);
+		return;
+	}
 	if (newParticle.timeBetweenParticles == 0) return;
 
 	newParticle.timePassed += dt;

@@ -92,7 +92,7 @@ void PhysicObject::draw()
     shader.setVec3("cameraCol", calculateCameraCollision(Camera::getCamera()->pos, Camera::getCamera()->direction));
     shader.setMat3("rotation", rotationMat);
     shader.setVec3("cameraPos", Camera::getCamera()->pos);
-    shader.setVec3("sunDirection", Camera::getCamera()->sunDirrection);
+    shader.setVec3("sunDirection", Camera::getCamera()->sunDirection);
     shader.setVec3("sunColor", glm::vec3(1, 1, 1));
     GLint rotMatLoc = glGetUniformLocation(shader.ID, "rotMat");
     glUniformMatrix4fv(rotMatLoc, 1, GL_FALSE, glm::value_ptr(Camera::getCamera()->returnMatrixTransform()));
