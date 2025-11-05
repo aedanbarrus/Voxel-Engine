@@ -84,7 +84,6 @@ private:
 	GLuint quadVAO, instanceVBO;
 	std::vector<ParticleInstanceData> instanceData;
 };
-float random();
 glm::vec3 randomVec(glm::vec3 myVec);
 glm::vec4 randomVec(glm::vec4 myVec);
 #endif

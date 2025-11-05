@@ -34,6 +34,7 @@ vec3 specular(vec3 color, float strength, vec3 normal, vec3 lightDirection, vec3
 }
 void main()
 {
+    vec3 color = ourColor;
     float hash = hash(truePos*16)/255.0f;
     vec3 norm = normalize(Normal);
     if(myTexture==1)
@@ -42,9 +43,25 @@ void main()
         diffuseStrength+=hash/30;
         specularStrength+=pow(hash,8.0) * 2;
     }
-    FragColor = vec4(ourColor*(hash/8+0.875),1);
-    //FragColor = vec4(ourColor,1);
+    if(myTexture==2 &&  fract(truePos.y)!=0.0f && fract(truePos.y)>9.0f/16.0f)
+    {
+        float chance = 0.0f;
+        if(fract(truePos.y)>10.0f/16.0f)
+            chance = 0.1f;
+        if(fract(truePos.y)>11.0f/16.0f)
+            chance = 0.3f;
+        if(fract(truePos.y)>12.0f/16.0f)
+            chance = 0.5f;
+        if(fract(truePos.y)>13.0f/16.0f)
+            chance = 0.7f;
+        if(fract(truePos.y)>14.0f/16.0f)
+            chance = 0.9f;
+        if(fract(truePos.y)>15.0f/16.0f)
+            chance = 1.0f;
+        if(hash(truePos*16)/255.0f<chance)
+            color = vec3(8, 128, 38)/256.0f;
+            
+    }
+    FragColor = vec4(color*(hash/8+0.875),1);
     FragColor.xyz *= (ambient(sunColor,ambientStrength)+diffuseStrength*diffuse(sunColor,Normal,sunDirection)+specular(sunColor,specularStrength,Normal,sunDirection,cameraPos,truePos));
-    //FragColor.xyz = vec3(gl_FragCoord.w,0,0);
-    //gl_FragDepth = gl_FragCoord.w-1;
 }

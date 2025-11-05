@@ -157,6 +157,7 @@
     <ClCompile Include="..\Particle_System.cpp" />
     <ClCompile Include="..\Physics.cpp" />
     <ClCompile Include="..\SHADER.cpp" />
+    <ClCompile Include="..\TerrainGenerator.cpp" />
     <ClCompile Include="..\World.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -173,7 +174,9 @@
     <ClInclude Include="..\Particle_System.h" />
     <ClInclude Include="..\Physics.h" />
     <ClInclude Include="..\SHADER.h" />
+    <ClInclude Include="..\TerrainGenerator.h" />
     <ClInclude Include="..\World.h" />
+    <ClInclude Include="Random.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

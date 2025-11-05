@@ -116,6 +116,9 @@
     <ClCompile Include="..\..\..\..\..\..\libraries\imgui\imgui-master\backends\imgui_impl_opengl3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\TerrainGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\camera.h">
@@ -159,6 +162,12 @@
     </ClInclude>
     <ClInclude Include="..\imgui\imstb_truetype.h">
       <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="Random.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\TerrainGenerator.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

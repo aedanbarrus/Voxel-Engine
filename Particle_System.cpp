@@ -1,4 +1,5 @@
 #include "Particle_System.h"
+#include "Random.h"
 ParticleSystem::ParticleSystem() {
 	myShader = Shader("pshader.vert", "pshader.frag");
 	myParticles.resize(10000);
@@ -167,14 +168,6 @@ void ParticleSystem::genParticle(ParticleGenerator& newParticle, float dt)
 			createParticle(newParticle.type);
 		newParticle.timePassed -= newParticle.timeBetweenParticles;
 	}
-}
-
-float random()
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_real_distribution<> dis(0.0, 1.0);
-	return dis(gen);
 }
 
 glm::vec3 randomVec(glm::vec3 myVec)

@@ -62,6 +62,8 @@ void main()
 		Normal = vec3(0.0f,0.0f,-1.0f);
 	ourColor = vec3(0.71,0.714,0.729);
 	if(textureID == 2 && face == 0) 
-		ourColor = vec3(0.19,1.0,0.21);
+		ourColor = vec3(8, 128, 38)/256;
+	else if (textureID == 2)
+		ourColor = 	vec3(146,108,77)/256;
 	myTexture = textureID;
 }

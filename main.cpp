@@ -20,12 +20,16 @@
 #include "Particle_System.h"
 #include "camera.h"
 #include <omp.h>
+#include "Random.h"
+#include "TerrainGenerator.h"
 #define _CRT_SECURE_NO_WARNINGS
 
 //Testing github changes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void joystick_callback(int jid, int event);
 void processInput(GLFWwindow* window);
+void processController();
 void resetChunk(Chunk& myChunk);
 inline std::ostream& operator<<(std::ostream& os, const glm::vec3& v);
 std::vector<std::vector<float>> getHeighmap();
@@ -48,10 +52,66 @@ bool mouseLeftClicked = false;
 int addForceCount = 0;
 bool mlc = false;
 bool mrc = false;
+int jmlc = 0;
+int jmrc = 0;
 float scale = 1;
 float threshhold = 0;
 glm::vec3 spin = glm::vec3(0.0,0.0,0.0);
+Earth* earth = nullptr;
 
+
+void setupGridVisual(Earth& earth, std::vector<ParticleGenerator>& debug, Grid& grid)
+{
+	debug.clear();
+    for (int i = 0; i < grid.height; i++)
+    {
+        for (int j = 0; j < grid.width; j++)
+        {
+            if (grid.grid[i][j] != nullptr)
+            {
+                earth.setVoxel(i, grid.grid[i][j]->count, j, 1, false);
+                if (grid.grid[i][j]->count != 0)
+                    earth.fill(i, 0, j, i, grid.grid[i][j]->count - 1, j, 0);
+                if( grid.grid[i][j]->cpos == glm::ivec2(-1))
+					continue;
+				ParticleGenerator gen = ParticleGenerator();
+				gen.numberPerCycle = 1;
+				gen.timeBetweenParticles = 0.1f;
+				ParticleType type = ParticleType();
+				type.pos = glm::vec3(i + 0.5f, grid.grid[i][j]->count + 1.f, j + 0.5f);
+                glm::vec2 vel = glm::vec2(grid.grid[i][j]->cpos - grid.grid[i][j]->pos);
+                glm::vec3 vel3 = glm::vec3(vel.y * 0.5, grid.grid[grid.grid[i][j]->cpos.y][grid.grid[i][j]->cpos.x]->count - grid.grid[i][j]->count, vel.x * 0.5);
+                type.lifetime = glm::length(vel3);
+                type.velocity = glm::normalize(vel3);
+				type.velocityVar = glm::vec3(0.1f, 0.1f, 0.01f)/ type.lifetime;
+				type.beginColor = glm::vec4(0, 1, 0, 1);
+				type.endColor = glm::vec4(0, 0, 1, 0);
+				type.beginSize = 0.2f;
+				type.endSize = 0.1f;
+				gen.type = type;
+                debug.push_back(gen);
+            }
+            else
+            {
+                earth.setVoxel(i, 0, j, 0, false);
+            }
+        }
+    }
+    earth.updateAllMeshes();
+}
+void setupHeightmap(Earth& earth, Heightmap& heightmap, int maxheight)
+{
+    for (int h = 0; h < heightmap.data.size(); h++)
+    {
+        for (int w = 0; w < heightmap.data[0].size(); w++)
+        {
+            int height = int(heightmap.data[h][w] * maxheight);
+            earth.fill(w, 0, h, w, height, h, 1);
+            earth.fill(w, height+1, h, w, maxheight, h, 0);
+        }
+    }
+    earth.updateAllMeshes();
+}
 int main()
 {
     glfwInit();
@@ -75,6 +135,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);;
+	glfwSetJoystickCallback(joystick_callback);
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -145,7 +206,7 @@ int main()
 
     
     time = glfwGetTime();
-    //*
+    /*
     std::vector<std::vector<float>> heightmap = getHeighmap();
     for (int i = 0; i < 1024; i++)
     {
@@ -305,7 +366,13 @@ int main()
 
     myEarth.updateMesh();
     std::vector<ParticleGenerator> myParticles;
+    std::vector<ParticleGenerator> debugParticles;
     bool syncing = false;
+    earth = &myEarth;
+    Grid myGrid = Grid(3,3);
+    myGrid.grid[myGrid.height / 2][myGrid.width / 2] = new GridSquare(glm::ivec2(myGrid.height / 2, myGrid.width / 2), glm::ivec2(-1));
+	setupGridVisual(myEarth, debugParticles, myGrid);
+	Heightmap terrainGen = Heightmap(3, 3);
     while (!glfwWindowShouldClose(window))
     {
         CollisionData data = { {} };
@@ -361,8 +428,56 @@ int main()
         sum /= 10;
         ImGui::Text("%f FPS", 1 / sum);
         ImGui::Text("Pos: (%f, %f, %f)", Camera::getCamera()->pos.x, Camera::getCamera()->pos.y, Camera::getCamera()->pos.z);
-        ImGui::End();
+        static int amount = 1;
+        ImGui::InputInt("Amount", &amount);
 
+        if (ImGui::Button("Add"))
+        {
+            for (int i = 0; i<amount; i++)
+            {
+                myGrid.addSquare();
+            }
+			setupGridVisual(myEarth, debugParticles, myGrid);
+        }
+        if (ImGui::Button("Upscale"))
+        {
+			myGrid.upscale();
+			setupGridVisual(myEarth, debugParticles, myGrid);
+        }
+        if (ImGui::Button("Calculate Counts"))
+        {
+			myGrid.calculateCounts();
+			setupGridVisual(myEarth, debugParticles, myGrid);
+        }
+        if (ImGui::Button("Visualize Heightmap"))
+        {
+            setupHeightmap(myEarth, terrainGen, 100);
+        }
+        if (ImGui::Button("Upscale Heightmap"))
+        {
+            terrainGen.upscale();
+            setupHeightmap(myEarth, terrainGen, 100);
+        }
+        if (ImGui::Button("Import Heightmap"))
+        {
+            terrainGen = Heightmap(myGrid);
+            setupHeightmap(myEarth, terrainGen, 100);
+        }
+        if (ImGui::Button("Blur Heightmap"))
+        {
+            terrainGen.blur();
+            setupHeightmap(myEarth, terrainGen, 100);
+		}
+        static bool enableDebugParticles = true;
+        ImGui::Checkbox("Enable Debug Particles", &enableDebugParticles);
+        if (enableDebugParticles)
+        {
+            for (ParticleGenerator& particle : debugParticles)
+            {
+                myEarth.genParticle(particle, deltaTime);
+            }
+        }
+        ImGui::End();
         ImGui::SetNextWindowPos(ImVec2(450, 0));
         ImGui::SetNextWindowSize(ImVec2(450, 400));
         ImGui::Begin("Particle Editor");
@@ -592,6 +707,7 @@ int main()
 				text = text.substr(text.find("\n") + 1, text.size());
             }
         }
+        
         ImGui::End();
         if (!mouseLeftClicked)
         {
@@ -606,29 +722,8 @@ int main()
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-        {
-            if (mlc == false && !cursorOn)
-            {
-                myEarth.raycast(0);
-                myEarth.updateMesh();
-                mlc = true;
-            }
-        }
-        else
-            mlc = false;
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-        {
-            if (mrc == false && !cursorOn)
-            {
-                myEarth.raycast(1);
-                myEarth.updateMesh();
-                mrc = true;
-            }
-        }
-        else
-            mrc = false;
         processInput(window);
+        processController();
         Camera::getCamera()->step(deltaTime);
         myEarth.step(deltaTime);
         Camera::getCamera()->sunDirection = glm::vec3(0, sin(glfwGetTime() / 10), cos(glfwGetTime() / 10));
@@ -748,7 +843,26 @@ void processInput(GLFWwindow* window)
         if (addForceCount < 128)
             addForceCount++;
         mouseLeftClicked = true;
+        if (mlc == false && !cursorOn)
+        {
+            earth->raycast(0);
+            earth->updateMesh();
+            mlc = true;
+        }
     }
+    else
+        mlc = false;
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
+        if (mrc == false && !cursorOn)
+        {
+            earth->raycast(1);
+            earth->updateMesh();
+            mrc = true;
+        }
+    }
+    else
+        mrc = false;
     bool pIsPressed = glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS;
     if (pIsPressed && !pWasPressed)
     {
@@ -808,6 +922,18 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     Camera::getCamera()->direction = glm::normalize(direction);
 }
 
+void joystick_callback(int jid, int event)
+{
+    if (event == GLFW_CONNECTED)
+    {
+		std::cout << "Joystick connected: " << jid << std::endl;
+    }
+    else if (event == GLFW_DISCONNECTED)
+    {
+		std::cout << "Joystick disconnected: " << jid << std::endl;
+    }
+}
+
 std::vector<std::vector<float>> getHeighmap() {
     FILE* fp;
     errno_t err = fopen_s(&fp, "Heightmap.json", "r");
@@ -845,7 +971,88 @@ std::vector<std::vector<float>> getHeighmap() {
     }
     return data;
 }
+
 inline std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
     return os;
+}
+
+void processController()
+{
+    GLFWgamepadstate state;
+
+    static bool pWasPressed = false;
+    for (int jid = 0; jid <= GLFW_JOYSTICK_LAST; jid++)
+    {
+        if ((glfwGetGamepadState(jid, &state)))
+        {
+            glm::vec3 tempVel = glm::vec3(0.0f, 0.0f, 0.0f);
+			Camera& cam = *Camera::getCamera();
+			glm::vec2 leftStick = glm::vec2(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X], state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
+			glm::vec2 rightStick = glm::vec2(state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+            if (glm::length(leftStick)>0.1f)
+            {
+                tempVel += glm::normalize(-leftStick.y*glm::vec3(cam.direction.x, 0, cam.direction.z) + leftStick.x*glm::vec3(-cam.direction.z, 0, cam.direction.x));
+            }
+            if (glm::length(rightStick) > 0.1f)
+            {
+                cam.yaw += rightStick.x * 0.15f;
+                cam.pitch += -rightStick.y * 0.15f;
+                if (cam.pitch > 89.0f)
+                    cam.pitch = 89.0f;
+                if (cam.pitch < -88.0f)
+                    cam.pitch = -88.0f;
+                glm::vec3 direction;
+                direction.x = cos(glm::radians(cam.yaw)) * cos(glm::radians(cam.pitch));
+                direction.y = sin(glm::radians(cam.pitch));
+                direction.z = sin(glm::radians(cam.yaw)) * cos(glm::radians(cam.pitch));
+                cam.direction = glm::normalize(direction);
+			}
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_A] || state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]!=-1)
+            {
+                tempVel += glm::normalize(glm::vec3(0, 1, 0));
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_Y] || state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] != -1)
+            {
+                tempVel += glm::normalize(glm::vec3(0, -1, 0));
+            }
+            if (!state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
+            {
+                mouseLeftClicked = false;
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
+            {
+                if (addForceCount < 128)
+                    addForceCount++;
+                mouseLeftClicked = true;
+                if (jmlc == 0 && !cursorOn)
+                {
+                    earth->raycast(0);
+                    earth->updateMesh();
+                }
+                jmlc = 2;
+            }
+            else
+            {
+                if (jmlc > 0)
+                    jmlc -= 1;
+            }
+            if (state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER])
+            {
+                if (jmrc == false && !cursorOn)
+                {
+                    earth->raycast(1);
+                    earth->updateMesh();
+                }
+                jmrc = 2;
+            }
+            else
+            {
+                if (jmrc > 0)
+                    jmrc -= 1;
+            }
+            if (glm::length(tempVel) != 0)
+                Camera::getCamera()->velocity += (glm::normalize(tempVel) * 0.075f * deltaTime);
+        }
+    }
 }
