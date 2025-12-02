@@ -170,8 +170,8 @@ void Earth::updateAllMeshes()
 void Earth::step(const float deltaTime)
 {
 	particles.step(deltaTime);
-	for (PhysicObject& c : physicObjects)
-		c.step(deltaTime);
+	//for (PhysicObject& c : physicObjects)
+	//	c.step(deltaTime);
 }
 
 bool Earth::isValidBlock(glm::vec3 pos)

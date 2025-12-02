@@ -1,5 +1,6 @@
 #include "Particle_System.h"
 #include "Random.h"
+
 ParticleSystem::ParticleSystem() {
 	myShader = Shader("pshader.vert", "pshader.frag");
 	myParticles.resize(10000);
@@ -57,6 +58,7 @@ ParticleSystem::ParticleSystem() {
 	}
 
 }
+
 void ParticleSystem::step(float deltaTime) {
 	instanceData.clear();
 	for (Particle& c : myParticles)
@@ -159,7 +161,7 @@ void ParticleSystem::genParticle(ParticleGenerator& newParticle, float dt)
 		return;
 	}
 	if (newParticle.timeBetweenParticles == 0) return;
-
+	
 	newParticle.timePassed += dt;
 
 	while (newParticle.timePassed >= newParticle.timeBetweenParticles)
