@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #ifndef Particle_System
 #define Particle_System
 #include <string>

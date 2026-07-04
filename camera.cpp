@@ -26,8 +26,8 @@ Camera::Camera(glm::vec3 pos, glm::vec3 cameraDirection, float fov, float near, 
 	pitch = 0.0f;
 	yaw = 90.0f;
 	velocity = glm::vec3(0, 0, 0);
-	velocityDamping = 0.045;
-	maxSpeed = 0.2;
+	velocityDamping = 0.095;
+	maxSpeed = 0.3;
 	mainCamera = this;
 }
 void Camera::step(float deltaTime)

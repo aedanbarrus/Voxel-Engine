@@ -11,7 +11,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <array>
+#include <numeric>
 #include "SHADER.h"
+#include "Random.h"
 #include "Physics.h"
 #include <bitset>
 #include <cstddef>
@@ -36,6 +39,7 @@ public:
 	void generateMesh2();
 	void draw(Shader& shader);
 	void reset();
+	void generate();
 private:
 	void addVertex(std::vector<uint32_t>& instanceData, int x, int y, int z, int textureID, int width, int height);
 };

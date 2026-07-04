@@ -1,47 +1,42 @@
 #include "Application.h"
 
-#include "Application.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include "Random.h"
-#include <iostream>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <rapidjson/rapidjson.h>
-#include <rapidjson/document.h>
-#include <rapidjson/filereadstream.h>
 Application* Application::s_instance = nullptr;
 
-Application::Application()
-    : m_window(nullptr)
-    , m_framebuffer(0)
-    , m_textureColorbuffer(0)
-    , m_depthTexture(0)
-    , m_cloudTexture(0)
-    , m_quadVAO(0)
-    , m_quadVBO(0)
-    , m_ssbo(0)
-    , m_maxDist(0)
-    , m_sampleSize(200)
-    , m_randomPoints(1)
-    , m_deltaTime(0.0f)
-    , m_lastFrame(0.0f)
-    , m_firstMouse(true)
-    , m_lastX(SCR_WIDTH / 2.0f)
-    , m_lastY(SCR_HEIGHT / 2.0f)
-    , m_cursorOn(false)
-    , m_mouseLeftClicked(false)
-    , m_mlc(false)
-    , m_mrc(false)
-    , m_jmlc(0)
-    , m_jmrc(0)
-    , m_addForceCount(0)
-    , m_lines(false)
-    , m_scale(1.0f)
-    , m_threshhold(0.0f)
-    , m_syncing(false)
-    , m_enableDebugParticles(true)
-	, m_shutdown(false)
+float getTime()
+{
+    return static_cast<float>(glfwGetTime());
+}
+
+Application::Application() : 
+    m_window(nullptr),
+    m_framebuffer(0),
+    m_textureColorbuffer(0),
+    m_depthTexture(0),
+    m_cloudTexture(0),
+    m_quadVAO(0),
+    m_quadVBO(0),
+    m_ssbo(0),
+    m_maxDist(0),
+    m_sampleSize(200),
+    m_randomPoints(1),
+    m_deltaTime(0.0f),
+    m_lastFrame(0.0f),
+    m_firstMouse(true),
+    m_lastX(SCR_WIDTH / 2.0f),
+    m_lastY(SCR_HEIGHT / 2.0f),
+    m_cursorOn(false),
+    m_mouseLeftClicked(false),
+    m_mlc(false),
+    m_mrc(false),
+    m_jmlc(0),
+    m_jmrc(0),
+    m_addForceCount(0),
+    m_lines(false),
+    m_scale(1.0f),
+    m_threshhold(0.0f),
+    m_syncing(false),
+    m_enableDebugParticles(true),
+	m_shutdown(false)
 {
     s_instance = this;
     m_placeBlock = { 0, 0, 0 };
@@ -55,14 +50,31 @@ Application::~Application() {
 }
 
 bool Application::initialize() {
+    float t;
+    t = getTime();
     if (!initWindow()) return false;
+    std::cout << "Intializing Window Time: " << getTime() - t  << std::endl;
+    t = getTime();
     if (!initOpenGL()) return false;
+    std::cout << "Intializing OpenGL Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initImGui()) return false;
+    std::cout << "Intializing ImGui Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initShaders()) return false;
+    std::cout << "Intializing Shaders Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initFramebuffers()) return false;
+    std::cout << "Intializing Framebuffer Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initGeometry()) return false;
+    std::cout << "Intializing Geometry Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initComputeShaders()) return false;
+    std::cout << "Intializing Compute Shaders Time: " << getTime() - t << std::endl;
+    t = getTime();
     if (!initWorld()) return false;
+    std::cout << "Intializing World Time: " << getTime() - t << std::endl;
 
     std::cout << "You unlocked the achievement: Run the Program\n";
     return true;
@@ -241,7 +253,7 @@ bool Application::initComputeShaders() {
 }
 
 bool Application::initWorld() {
-    m_camera = std::make_unique<Camera>(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1), 90.0f, 0.01f, 1000.0f);
+    m_camera = std::make_unique<Camera>(glm::vec3(0.5, 3, 0.5), glm::vec3(0, 0, 1), 90.0f, 0.01f, 1000.0f);
     m_earth = std::make_unique<Earth>();
     m_particleSystem = std::make_unique<ParticleSystem>();
     m_grid = std::make_unique<Grid>(3, 3);
@@ -523,7 +535,7 @@ void Application::processInput() {
     }
 
     if (glm::length(tempVel) != 0) {
-        m_camera->velocity += glm::normalize(tempVel) * 0.075f * m_deltaTime;
+        m_camera->velocity += glm::normalize(tempVel) * 0.175f * m_deltaTime;
     }
 
     if (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {

@@ -300,7 +300,10 @@ public:
 		data = newdata;
 	}
 };
-
-
-
+//
+//
+//int getHeight(glm::vec2 pos)
+//{
+//	return 20 * (glm::sin(pos.x / 20.0f) + glm::cos(pos.y / 20.0f)) + 40;
+//}
 #endif
